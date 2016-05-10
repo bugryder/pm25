@@ -1,0 +1,159 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>PM25 Demo Page</title>
+    <style type="text/css">
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        #map {
+            height: 100%;
+        }
+
+        #map_wrapper {
+            height: 50px;
+        }
+
+        #map_canvas {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+
+</head>
+<body>
+
+    <div id="map">
+    </div>
+</body>
+
+<!--The jQuery library is required and is referenced by default in _Layout.cshtml. -->
+<script src="/Scripts/jquery-1.6.4.min.js"></script>
+<script type="text/javascript" src="http://maps.google.com/maps/api/js" type="text/javascript"></script>
+<script src="/Scripts/markerclusterer.js"></script>
+<script src="/Scripts/jquery.blockUI.js"></script>
+
+
+<script type="text/javascript">
+    $(function () {
+
+        $.blockUI({ message: '<h1>載入地圖資料中....</h1>' });
+
+        var options = {
+            zoom: 8,
+            center: new google.maps.LatLng(23.69781, 120.96051499999999),
+            mapTypeId: google.maps.MapTypeId.ROADMAP,
+            mapTypeControl: false
+        };
+
+        // init map
+        var map = new google.maps.Map(document.getElementById('map'), options);
+
+        var markers = [];
+        var infowindow = null;
+
+        // Create our info window content
+        var infoWindowContent = '';
+
+
+
+        var SiteData, PM25Data;
+        $.when(
+            $.getJSON("http://opendata.epa.gov.tw/webapi/api/rest/datastore/355000000I-000005/?format=json&callback=?", function (data) {
+                SiteData = data;
+            }),
+            $.getJSON("http://opendata.epa.gov.tw/webapi/api/rest/datastore/355000000I-000001/?format=json&callback=?", function (data) {
+                PM25Data = data;
+            })
+        ).then(function () {
+            if (SiteData && PM25Data) {
+
+                $.each(SiteData.result.records, function (index, Site) {
+
+                    // find each Site Data
+                    var item = $.grep(PM25Data.result.records, function (item) {
+                        return item.SiteName == Site.SiteName;
+                    });
+
+                    var PM25, image;
+
+
+                    if (item.length) {
+
+                        PM25 = item[0]["PM2.5"];
+
+                        if (PM25 <= 35) {
+                            image = '/Content/happy.png';
+                        } else if (PM25 <= 70 && PM25 >= 36) {
+                            image = '/Content/sad.png';
+                        }
+                        else {
+                            image = '/Content/cry.png';
+                        }
+                    }
+
+
+                    marker = new google.maps.Marker({
+                        position: new google.maps.LatLng(Site.TWD97Lat, Site.TWD97Lon),
+                        map: map,
+                        icon: image
+                    });
+
+                    infoWindow = new google.maps.InfoWindow({
+                        content: ""
+                    });
+
+
+
+
+                    google.maps.event.addListener(marker, 'mouseover', (function (marker) {
+                        return function () {
+
+
+
+                            infoWindowContent = '<div id="map_wrapper">' +
+                                                '<div id="map_canvas" class="mapping">' +
+                                                '<div>測站  : ' + Site.SiteName + '</div>' +
+                                                '<div>地址  : ' + Site.SiteAddress + '</div>' +
+                                                '<div>PM2.5: ' + PM25 + ' µg/m³</div>' +
+                                                '</div>' +
+                                                '</div>'
+
+
+                            infoWindow.setContent(infoWindowContent);
+                            infoWindow.open(map, marker);
+                        }
+                    })(marker));
+
+
+                    google.maps.event.addListener(marker, 'mouseout', (function (marker) {
+                        return function () {
+                            infoWindow.close();
+                        }
+                    })(marker));
+
+
+                    markers.push(marker);
+                });
+                var markerCluster = new MarkerClusterer(map, markers);
+                $.unblockUI();
+
+
+
+            }
+            else {
+                alert('發生錯誤!! 無法取得 [空氣品質即時污染指標] 資料!');
+                // Request for graphic data didn't work, handle it
+            }
+
+        });
+
+    });
+
+
+</script>
+
+</html>
