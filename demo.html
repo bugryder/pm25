@@ -65,7 +65,7 @@
             $.getJSON("//opendata.epa.gov.tw/webapi/api/rest/datastore/355000000I-000005/?format=json&callback=?", function (data) {
                 SiteData = data;
             }),
-            $.getJSON("//opendata.epa.gov.tw/webapi/api/rest/datastore/355000000I-000001/?format=json&callback=?", function (data) {
+            $.getJSON("//opendata.epa.gov.tw/ws/Data/ATM00625/?$format=json", function (data) {
                 PM25Data = data;
             })
         ).then(function () {
